@@ -1,10 +1,8 @@
-import argparse
 import csv
 import datetime as dt
 import logging
 import os
 import re
-from argparse import ArgumentParser
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -17,13 +15,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from linkedin_job_count import __project_name__, __version__
+from linkedin_job_count.cli import setup_parser
+from linkedin_job_count.logging import get_log_level_for_verbosity, setup_logging
 
 logger = logging.getLogger(__name__)
 
 
 class Environment(BaseModel):
-    EMAIL: str
-    PASSWORD: str
+    LINKEDIN_EMAIL: str | None = None
+    LINKEDIN_PASSWORD: str | None = None
 
 
 class Job(BaseModel):
@@ -119,123 +119,47 @@ def get_job_count(driver: WebDriver, job_title: str, location: str) -> int:
     return count
 
 
-def setup_parser() -> ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog=__project_name__,
-        description=("A CLI tool for counting job postings on LinkedIn."),
-        add_help=True,
-    )
-    parser.add_argument(
-        "--version", "-V", action="version", version=f"{__project_name__} {__version__}"
-    )
-
-    parser.add_argument(
-        "input-file",
-        metavar="input-file",
-        help=(
-            "The ID of the Spotify playlist on which to add the BBC station's current"
-            " playlist tracks."
-        ),
-        type=str,
-    )
-    parser.add_argument(
-        "output-file",
-        help=(""),
-        metavar="output-file",
-        type=str,
-    )
-    parser.add_argument(
-        "--chrome-user-data-dir",
-        "-d",
-        help=(
-            "Path to your chrome user data directory, for storing cookies (to prevent needing to login each time)."
-        ),
-        required=False,
-        action="store_true",
-    )
-    parser.add_argument(
-        "--email",
-        "-e",
-        help=(
-            "Your LinkedIn email address. If not provided, the tool will look for the "
-            "environment variable LINKEDIN_EMAIL"
-        ),
-        required=False,
-        action="store_true",
-    )
-    parser.add_argument(
-        "--password",
-        "-p",
-        help=(
-            "Your LinkedIn email address. If not provided, the tool will look for the "
-            "environment variable LINKEDIN_PASSWORD"
-        ),
-        required=False,
-        action="store_true",
-    )
-    parser.add_argument(
-        "--headed",
-        "-H",
-        help=(
-            "Remove all duplicates and any tracks that are not in the source playlist."
-        ),
-        required=False,
-        action="store_true",
-    )
-    parser.add_argument(
-        "--verbose",
-        "-v",
-        help="Increase logging verbosity (-vv to increase further).",
-        action="count",
-        default=0,
-    )
-    parser.add_argument(
-        "--quiet",
-        "-q",
-        help="Decrease logging verbosity (-qq to decrease further).",
-        action="count",
-        default=0,
-    )
-    parser.add_argument(
-        "--log-file",
-        "-l",
-        help="Write logs to this file. Suppresses logging in stdout.",
-        required=False,
-        default=None,
-        type=str,
-    )
-
-    return parser
-
-
 def main():
-
-    DATA_DIR = Path(__file__).parent.parent / "data"
-    INPUT_FILE = DATA_DIR / "input.csv"
-    RESULTS_FILE = DATA_DIR / "results.csv"
-
-    logging.basicConfig(
-        level="INFO",
-        format="%(asctime)s: %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S %Z",
-    )
 
     parser = setup_parser()
     args = parser.parse_args()
 
+    log_level = get_log_level_for_verbosity(args.verbose)
+    setup_logging(log_level, args.log_file)
+
     environment = Environment.model_validate(os.environ)
-    jobs = read_jobs_to_search_for(INPUT_FILE)
+
+    email = args.email or environment.LINKEDIN_EMAIL
+    password = args.password or environment.LINKEDIN_PASSWORD
+
+    if email is None:
+        logging.error(
+            "No email provided - provide an email address using the --email flag, or set the environment variable LINKEDIN_EMAIL"
+        )
+        raise ValueError("No email provided")
+
+    if password is None:
+        logging.error(
+            "No password provided - provide a password using the --password flag, or set the environment variable LINKEDIN_PASSWORD"
+        )
+        raise ValueError("No email provided")
+
+    print(args)
+    jobs = read_jobs_to_search_for(args.input_file)
 
     options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--user-data-dir=data")
+    if not args.headed:
+        options.add_argument("--headless")
+    if args.chrome_user_data_dir:
+        options.add_argument(f"--user-data-dir={args.chrome_user_data_dir}")
+
     driver = webdriver.Chrome(options=options)
 
     driver.get(f"{LINKEDIN_BASE_URL}/feed/")
 
     if "login" in driver.current_url:
         logger.info("Logging in")
-        login_to_linkedin(driver, environment.EMAIL, environment.PASSWORD)
+        login_to_linkedin(driver, email, password)
         logger.info("Successfully logged in!")
     else:
         logging.info("Already logged in to LinkedIn")
@@ -252,7 +176,7 @@ def main():
         )
         jobs_with_counts.append(job_with_count)
 
-    write_jobs_with_counts(RESULTS_FILE, jobs_with_counts)
+    write_jobs_with_counts(args.output_file, jobs_with_counts)
 
     driver.quit()
 
