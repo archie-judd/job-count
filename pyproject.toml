@@ -1,24 +1,25 @@
-[tool.poetry]
+[project]
 name = "linkedin-job-count"
 version = "0.0.1"
 description = ""
-authors = ["Archie Judd"]
 readme = "README.md"
-packages = [{include = "linkedin_job_count" }]
+dependencies = [
+    "pydantic>=2.10.6",
+    "selenium>=4.28.1",
+]
+requires-python = ">=3.12"
 
-[tool.poetry.scripts]
+[tool.uv]
+package = true
+
+[project.scripts]
 linkedin-job-count = "linkedin_job_count.main:main"
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.14"
-selenium = "^4.28.1"
-pydantic = "^2.10.6"
-pyinstaller = "^6.11.1"
-
-[tool.poetry.group.dev.dependencies]
-pylint = "^2.17.4"
-black = "^24.8.0"
+[dependency-groups]
+lint = [
+    "ruff>=0.9.3",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
