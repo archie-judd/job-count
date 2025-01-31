@@ -26,6 +26,8 @@ from linkedin_job_count.logging import get_log_level_for_verbosity, setup_loggin
 
 logger = logging.getLogger(__name__)
 
+LINKEDIN_BASE_URL = "https://www.linkedin.com"
+
 
 class Environment(BaseModel):
     LINKEDIN_EMAIL: str | None = None
@@ -40,9 +42,6 @@ class Job(BaseModel):
 class JobWithCount(Job):
     ts: dt.datetime
     count: int
-
-
-LINKEDIN_BASE_URL = "https://www.linkedin.com"
 
 
 def read_jobs_to_search_for(file_path: Path) -> list[Job]:
@@ -77,20 +76,16 @@ def login_to_linkedin(
 
     driver.get(f"{LINKEDIN_BASE_URL}/login")  # Open the LinkedIn login page
 
-    # Wait for login fields to load
     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "username")))
 
-    # Enter email
     email_input = driver.find_element(By.ID, "username")
     email_input.send_keys(email)
 
-    # Enter password
     password_input = driver.find_element(By.ID, "password")
     password_input.send_keys(password)
     password_input.send_keys(Keys.RETURN)  # Press Enter to log in
 
     logger.info("Waiting for successful login...")
-    # Wait for successful login
     WebDriverWait(driver, timeout_s).until(
         EC.presence_of_element_located((By.ID, "global-nav"))
     )
@@ -101,10 +96,9 @@ def login_to_linkedin(
 
 def get_job_count(driver: WebDriver, job_title: str, location: str) -> int:
 
-    url = f"https://www.linkedin.com/jobs/search/?keywords={job_title}&location={location}"
+    url = f"{LINKEDIN_BASE_URL}/jobs/search/?keywords={job_title}&location={location}"
     driver.get(url)
 
-    # Wait for job results to load
     wait = WebDriverWait(driver, 10)
     wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
 
