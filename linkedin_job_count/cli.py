@@ -1,7 +1,25 @@
 import argparse
 from argparse import ArgumentParser
+from pathlib import Path
+
+from pydantic import BaseModel
 
 from linkedin_job_count import __project_name__, __version__
+from linkedin_job_count.browser import Browser
+
+
+class CliArgs(BaseModel):
+    input_file: Path
+    output_file: Path
+    email: str | None
+    password: str | None
+    browser: Browser = Browser.CHROME
+    headless: bool = False
+    cookie_dir: Path | None
+    clear_cookies: bool = False
+    login_timeout: int = 30
+    verbose: int = 0
+    log_file: str | None = None
 
 
 def setup_parser() -> ArgumentParser:
@@ -30,24 +48,11 @@ def setup_parser() -> ArgumentParser:
         type=str,
     )
     parser.add_argument(
-        "--chrome-user-data-dir",
-        "-d",
-        help=(
-            "Path to your chrome user data directory, for storing cookies (to prevent"
-            " needing to login each time). This can be found by running "
-            "`chrome://version/` in your browser and looking for the 'Profile Path' "
-            "field, or you can define a new directory."
-        ),
-        required=False,
-        default=None,
-        type=str,
-    )
-    parser.add_argument(
         "--email",
         "-e",
         help=(
             "Your LinkedIn email address. If not provided, the tool will look for the "
-            "environment variable LINKEDIN_EMAIL"
+            "environment variable LINKEDIN_EMAIL."
         ),
         required=False,
         default=None,
@@ -58,28 +63,62 @@ def setup_parser() -> ArgumentParser:
         "-p",
         help=(
             "Your LinkedIn email address. If not provided, the tool will look for the "
-            "environment variable LINKEDIN_PASSWORD"
+            "environment variable LINKEDIN_PASSWORD."
         ),
         required=False,
         default=None,
         type=str,
     )
     parser.add_argument(
-        "--headed",
-        "-H",
+        "--browser",
+        "-b",
         help=(
-            "Run the tool in a headed browser window. By default, the tool runs in a "
-            "headless window"
+            "Choose the browser to use. Options are 'chrome' 'firefox'.  Default is "
+            "'chrome'."
         ),
+        required=False,
+        choices=[browser.value for browser in Browser],
+        default=Browser.CHROME.value,
+        type=str,
+    )
+    parser.add_argument(
+        "--headless",
+        "-H",
+        help="Run the tool in a headless browser window.",
         required=False,
         action="store_true",
     )
     parser.add_argument(
+        "--cookie-dir",
+        "-d",
+        help=(
+            "Path to a directory for storing cookies (to prevent needing to login each "
+            "time). Defaults to ~/.local/share/linkedin-job-count."
+        ),
+        required=False,
+        default=None,
+        type=str,
+    )
+    parser.add_argument(
+        "--clear-cookies",
+        "-c",
+        help="Clear the cookies before running the tool.",
+        required=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--login-timeout",
+        "-t",
+        help=("Number of seconds to wait for the login page to load."),
+        default=30,
+        type=int,
+    )
+    parser.add_argument(
         "--verbose",
         "-v",
-        help="Increase logging verbosity (-vv to increase further).",
+        help="Increase logging verbosity (default is -v, -vv to increase further).",
         action="count",
-        default=0,
+        default=1,
     )
     parser.add_argument(
         "--quiet",
@@ -98,3 +137,8 @@ def setup_parser() -> ArgumentParser:
     )
 
     return parser
+
+
+def parse_args(parser: ArgumentParser) -> CliArgs:
+    args = CliArgs.model_validate(vars(parser.parse_args()))
+    return args
