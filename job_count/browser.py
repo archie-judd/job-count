@@ -56,7 +56,7 @@ def save_cookies(driver: WebDriver, cookie_path: Path):
     logger.info(f"Cookies saved to {cookie_path}")
 
 
-def load_cookies(driver: WebDriver, cookie_path: Path):
+def load_cookies(driver: WebDriver, cookie_path: Path) -> bool:
     if cookie_path.exists():
         with cookie_path.open("rb") as f:
             cookies = pickle.load(f)
@@ -64,8 +64,11 @@ def load_cookies(driver: WebDriver, cookie_path: Path):
                 driver.add_cookie(cookie)
         logger.info("Cookies restored!")
         driver.refresh()
+        return True
     else:
-        logger.info(f"No cookies file found at {cookie_path}")
+        logger.error(
+            f"No cookies file found at {cookie_path}. Run the login command first."
+        )
 
 
 def clear_cookies(cookie_path: Path):

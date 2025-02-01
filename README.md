@@ -1,1 +1,2 @@
-# linkedin-job-count
+# job-count
+

@@ -1,5 +1,5 @@
 [project]
-name = "linkedin-job-count"
+name = "job-count"
 version = "0.0.1"
 description = ""
 readme = "README.md"
@@ -13,7 +13,7 @@ requires-python = ">=3.13"
 package = true
 
 [project.scripts]
-linkedin-job-count = "linkedin_job_count.main:main"
+job-count = "job_count.main:main"
 
 [dependency-groups]
 lint = [

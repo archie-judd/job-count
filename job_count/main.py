@@ -1,18 +1,17 @@
 import csv
 import datetime as dt
 import logging
-import os
 import re
+import sys
 from pathlib import Path
 
 from pydantic import BaseModel
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from linkedin_job_count import __project_name__, __version__
-from linkedin_job_count.browser import (
+from job_count import __project_name__, __version__
+from job_count.browser import (
     DEFAULT_COOKIE_DIR,
     WebDriver,
     clear_cookies,
@@ -21,17 +20,18 @@ from linkedin_job_count.browser import (
     make_driver,
     save_cookies,
 )
-from linkedin_job_count.cli import parse_args, setup_parser
-from linkedin_job_count.logging import get_log_level_for_verbosity, setup_logging
+from job_count.cli import (
+    ClearCookiesCliArgs,
+    CountJobsCliArgs,
+    LoginCliArgs,
+    parse_args,
+    setup_parser,
+)
+from job_count.logging import get_log_level_for_verbosity, setup_logging
 
 logger = logging.getLogger(__name__)
 
 LINKEDIN_BASE_URL = "https://www.linkedin.com"
-
-
-class Environment(BaseModel):
-    LINKEDIN_EMAIL: str | None = None
-    LINKEDIN_PASSWORD: str | None = None
 
 
 class Job(BaseModel):
@@ -45,14 +45,15 @@ class JobWithCount(Job):
 
 
 def read_jobs_to_search_for(file_path: Path) -> list[Job]:
+
     logger.info(f"Readings job to search for from {file_path}")
     with open(file_path, mode="r", encoding="utf-8") as file:
         return [Job.model_validate(row) for row in csv.DictReader(file)]
 
 
 def write_jobs_with_counts(file_path: Path, jobs_with_counts: list[JobWithCount]):
-    file_exists = os.path.exists(file_path) and os.path.getsize(file_path) > 0
 
+    file_exists = Path.exists(file_path) and Path(file_path).stat().st_size > 0
     logger.info(f"Writing job counts to {file_path}")
 
     data = [job.model_dump() for job in jobs_with_counts]
@@ -70,20 +71,9 @@ def make_job_search_url(job_title: str, location: str) -> str:
     return f"{LINKEDIN_BASE_URL}/jobs/search/?keywords={job_title}&location={location}"
 
 
-def login_to_linkedin(
-    driver: WebDriver, email: str, password: str, timeout_s: int, cookie_path: Path
-):
+def login_to_linkedin(driver: WebDriver, timeout_s: int, cookie_path: Path):
 
     driver.get(f"{LINKEDIN_BASE_URL}/login")  # Open the LinkedIn login page
-
-    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "username")))
-
-    email_input = driver.find_element(By.ID, "username")
-    email_input.send_keys(email)
-
-    password_input = driver.find_element(By.ID, "password")
-    password_input.send_keys(password)
-    password_input.send_keys(Keys.RETURN)  # Press Enter to log in
 
     logger.info("Waiting for successful login...")
     WebDriverWait(driver, timeout_s).until(
@@ -128,77 +118,60 @@ def get_job_count(driver: WebDriver, job_title: str, location: str) -> int:
     return count
 
 
-def main():
+def handle_login(args: LoginCliArgs):
 
-    parser = setup_parser()
-    args = parse_args(parser)
-
-    log_level = get_log_level_for_verbosity(args.verbose)
-    setup_logging(log_level, args.log_file)
-
-    environment = Environment.model_validate(os.environ)
-
-    email = args.email or environment.LINKEDIN_EMAIL
-    password = args.password or environment.LINKEDIN_PASSWORD
     cookie_path = get_cookie_path(args.cookie_dir or DEFAULT_COOKIE_DIR, args.browser)
+    driver = make_driver(args.browser, False)
 
-    if args.clear_cookies:
-        clear_cookies(cookie_path)
-
-    if email is None:
+    try:
+        login_to_linkedin(driver, args.login_timeout, cookie_path)
+    except Exception as e:
+        driver.quit()
         logger.error(
-            "No email provided - provide an email address using the --email flag, or "
-            "set the environment variable LINKEDIN_EMAIL."
+            "Failed to login, perhaps there was a Captcha that was not "
+            f"completed. Please try again. Exception: {e}"
         )
-        raise ValueError("No email provided")
+        sys.exit(1)
 
-    if password is None:
-        logger.error(
-            "No password provided - provide a password using the --password flag, or "
-            "set the environment variable LINKEDIN_PASSWORD."
-        )
-        raise ValueError("No email provided")
+    logger.info("Successfully logged in!")
+
+
+def handle_clear_cookies(args: ClearCookiesCliArgs):
+
+    cookie_path = get_cookie_path(args.cookie_dir or DEFAULT_COOKIE_DIR, args.browser)
+    clear_cookies(cookie_path)
+
+    logger.info("Cookies cleared")
+
+
+def handle_count_jobs(args: CountJobsCliArgs):
+
+    cookie_path = get_cookie_path(args.cookie_dir or DEFAULT_COOKIE_DIR, args.browser)
+    driver = make_driver(args.browser, not args.no_headless)
 
     jobs = read_jobs_to_search_for(args.input_file)
-
-    driver = make_driver(args.browser, args.headless)
-
     driver.get(f"{LINKEDIN_BASE_URL}/feed/")
-    load_cookies(driver, cookie_path)
+    cookies_loaded = load_cookies(driver, cookie_path)
 
+    if not cookies_loaded:
+        logger.error("No cookies loaded. run 'linkedin-job-count login' first.")
+        sys.exit(0)
     if "login" in driver.current_url:
-        logger.info("Logging in")
-        try:
-            login_to_linkedin(driver, email, password, args.login_timeout, cookie_path)
-        except Exception as e:
-            driver.quit()
+        logger.error(
+            "Cookies loaded but not logged in. Run 'linkedin-job-count login' to "
+            "relogin first."
+        )
+        sys.exit(0)
 
-            if args.headless:
-                logger.error(
-                    f"Failed to log in headless, there is a possibly a Captcha."
-                )
-                logger.info(
-                    f"Retrying login with a headed browser. Please complete the"
-                    " Captcha."
-                )
-                driver = make_driver(args.browser, False)
-                login_to_linkedin(
-                    driver, email, password, args.login_timeout, cookie_path
-                )
-            else:
-                logger.error(
-                    f"Failed to login, perhaps there was a captcha that was not "
-                    "completed. Please try again."
-                )
-
-        logger.info("Successfully logged in!")
-    else:
-        logger.info("Already logged in to LinkedIn")
+    logger.info("Logged in to LinkedIn")
 
     jobs_with_counts: list[JobWithCount] = []
+
     for job in jobs:
         count = get_job_count(driver, job.job_title, job.location)
+
         logger.info(f"Number of {job.job_title} jobs in {job.location}: {count}")
+
         job_with_count = JobWithCount(
             job_title=job.job_title,
             location=job.location,
@@ -208,7 +181,31 @@ def main():
         jobs_with_counts.append(job_with_count)
 
     driver.quit()
-
     write_jobs_with_counts(args.output_file, jobs_with_counts)
 
-    logger.info("Done!")
+
+def main():
+
+    try:
+        parser = setup_parser()
+        args = parse_args(parser)
+
+        log_level = get_log_level_for_verbosity(args.verbose)
+        setup_logging(log_level, args.log_file)
+
+        match args.command:
+            case "login":
+                handle_login(args)
+            case "clear-cookies":
+                handle_clear_cookies(args)
+            case "count-jobs":
+                handle_count_jobs(args)
+            case _:
+                raise ValueError(f"Unrecognized command: {args.command}")
+
+        logger.info("Done!")
+        sys.exit(0)
+
+    except KeyboardInterrupt:
+        logger.info("Exiting early due to keyboard interrupt")
+        sys.exit(1)
