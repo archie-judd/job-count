@@ -109,3 +109,4 @@ Run `which job-count` from your activate venv to get the path.
 ## TODO:
 
 - `job-count plot` command, to plot results.
+- Support other job hunting websites - Indeed, Reed, Monster etc.
