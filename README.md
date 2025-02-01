@@ -89,10 +89,6 @@ If your output file doesn't exist, it will be created, if there is already data 
 
 Run `job-count clear-cookies` to clear your cookies. You will need to run `job-count login` again.
 
-## TODO:
-
-- `job-count plot` command, to plot results.
-
 ## FAQ:
 
 1. Does `job-count` do anything nefarious with my credentials?
@@ -109,3 +105,7 @@ The easiest way is probably via [crontab](https://man7.org/linux/man-pages/man5/
 ```
 
 Run `which job-count` from your activate venv to get the path.
+
+## TODO:
+
+- `job-count plot` command, to plot results.
