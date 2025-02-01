@@ -73,7 +73,7 @@ It will write the output which will look like (you can see an example at `sample
 | Panda Fluffer | Greater Tokyo | 2024-01-25T18:07:32.010Z | 203   |
 | ...           | ...           | ...                      | ...   |
 
-If your output file doesn't exist, it will be created, if there is already data in your output file, it will be amended to.
+If your output file doesn't exist, it will be created, if there is already data in your output file, it will be appended to.
 
 ## Clear cookies
 
