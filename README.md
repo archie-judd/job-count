@@ -9,7 +9,7 @@ Perfect for those of us that are curious (anxious) about the trajectory of a par
 ## Requirements
 
 - **LinkedIn account** - preferably not the one you actually use, in case it gets banned.
-- **uv** - 0.4.30+, for installation.
+- [**uv**](https://github.com/astral-sh/uv) - `0.4.30+`, for installation.
 
 - **Chrome** or **Firefox** - this is a scraping tool!
 
@@ -27,7 +27,13 @@ uv venv -p 3.13.0
 uv pip install git+https://github.com/archie-judd/job-count.git
 ```
 
-3. Check installation worked:
+3. Activate your venv
+
+```bash
+source .venv/bin/activate
+```
+
+4. Check installation worked:
 
 ```bash
 job-count --version
@@ -57,7 +63,7 @@ job-count count-jobs </path/to/input/file.csv> </path/to/output/file.csv>
 
 Run `job-count count-jobs -h` for more options.
 
-The command takes an input `.csv` file of format (you can see an example at `sample_data/input.csv`):
+The command takes an input `.csv` file of format:\
 
 | job_title     | location      |
 | ------------- | ------------- |
@@ -65,7 +71,9 @@ The command takes an input `.csv` file of format (you can see an example at `sam
 | Panda Fluffer | Greater Tokyo |
 | ...           | ...           |
 
-It will write the output which will look like (you can see an example at `sample_data/output.csv`):
+You can see an example at `sample_data/input.csv`.
+
+It will write the output which will look like:
 
 | job_title     | location      | ts                       | count |
 | ------------- | ------------- | ------------------------ | ----- |
@@ -73,13 +81,13 @@ It will write the output which will look like (you can see an example at `sample
 | Panda Fluffer | Greater Tokyo | 2024-01-25T18:07:32.010Z | 203   |
 | ...           | ...           | ...                      | ...   |
 
+You can see an example at `sample_data/output.csv`.
+
 If your output file doesn't exist, it will be created, if there is already data in your output file, it will be appended to.
 
 ## Clear cookies
 
-Run `job-count clear-cookies`
-
-To clear your cookies.
+Run `job-count clear-cookies` to clear your cookies. You will need to run `job-count login` again.
 
 ## TODO:
 
