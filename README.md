@@ -93,7 +93,7 @@ Run `job-count clear-cookies` to clear your cookies. You will need to run `job-c
 
 1. Does `job-count` do anything nefarious with my credentials?
 
-No, but read code to be sure.
+No, you read the code to be sure.
 
 2. How can I run `job-count` as a cron job?
 
