@@ -1,4 +1,4 @@
-# job-count
+# Job Count - Count LinkedIn Job Postings
 
 `job-count` is a python CLI tool for counting the number of job postings on LinkedIn.
 
@@ -17,15 +17,21 @@ Perfect for those of us that are curious (anxious) about the trajectory of a par
 
 1. Create a venv with the correct python version:
 
-`uv venv -p 3.13.0`
+```bash
+uv venv -p 3.13.0
+```
 
 2. Install as a package:
 
-`uv pip install git+https://github.com/archie-judd/job-count.git`
+```bash
+uv pip install git+https://github.com/archie-judd/job-count.git
+```
 
 3. Check installation worked:
 
-`job-count --version`
+```bash
+job-count --version
+```
 
 ## Login to LinkedIn
 
@@ -33,7 +39,9 @@ To check for LinkedIn jobs, you must provide login credentials to the CLI.
 
 Run the following command, which will open a browser (Chrome by default, but Firefox is available too), and take you to the LinkedIn login page.
 
-`job-count login `
+```bash
+job-count login
+```
 
 Enter your details, and login, completing any Captcha questions. Upon login, the cookies will be saved (at `~/.local/share/job-count`, unless another location is specified) and the browser window will close.
 
@@ -43,7 +51,9 @@ Run `job-count login -h` to see the options available for this command.
 
 Having logged in, you can count the number of postings for various jobs with the following command:
 
-`job-count count-jobs </path/to/input/file.csv> </path/to/output/file.csv>`
+```bash
+job-count count-jobs </path/to/input/file.csv> </path/to/output/file.csv>
+```
 
 Run `job-count count-jobs -h` for more options.
 
