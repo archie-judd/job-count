@@ -98,3 +98,14 @@ Run `job-count clear-cookies` to clear your cookies. You will need to run `job-c
 1. Does `job-count` do anything nefarious with my credentials?
 
 No, but read code to be sure.
+
+2. How can I run `job-count` as a cron job?
+
+The easiest way is probably via [crontab](https://man7.org/linux/man-pages/man5/crontab.5.html). Here is an example that runs at 9pm each day:
+
+```bash
+0 21 * * * <path/to/job-count> count-jobs <path/to/input.csv> <path/to/output.csv> --log-file <path/to/log-file.log> --verbose
+
+```
+
+Run `which job-count` from your activate venv to get the path.
