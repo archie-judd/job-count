@@ -1,4 +1,4 @@
-# Job Count - Count Job Postings
+# Job Count
 
 `job-count` is a python CLI tool for counting the number of job postings on LinkedIn.
 
