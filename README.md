@@ -104,7 +104,7 @@ The easiest way is probably via [crontab](https://man7.org/linux/man-pages/man5/
 
 ```
 
-Run `which job-count` from your activate venv to get the path.
+Run `which job-count` from your activated venv to get the path.
 
 ## TODO:
 
