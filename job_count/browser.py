@@ -1,5 +1,6 @@
 import logging
 import pickle
+import shutil
 from enum import StrEnum
 from pathlib import Path
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 WebDriver = ChromeWebDriver | FirefoxWebDriver
 
-DEFAULT_COOKIE_DIR = Path("~/.local/share/linkedin-job-count").expanduser()
+DEFAULT_COOKIE_DIR = Path("~/.local/share/job-count").expanduser()
 
 
 class Browser(StrEnum):
@@ -25,6 +26,14 @@ def make_driver(
     browser: Browser,
     headless: bool,
 ) -> ChromeWebDriver | FirefoxWebDriver:
+
+    if not shutil.which(browser.value):
+        logger.error(
+            f"{browser.value} not found in PATH. Ensure the it is installed or select "
+            "another browser using the --browser argument. Available browsers: "
+            f"{', '.join(list(Browser))}."
+        )
+        exit(1)
 
     if browser is Browser.CHROME:
         options = ChromeOptions()
@@ -47,10 +56,8 @@ def get_cookie_path(cookie_dir: Path, browser: Browser) -> Path:
 
 
 def save_cookies(driver: WebDriver, cookie_path: Path):
-    # Ensure the directory exists before saving cookies
     cookie_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Save cookies to the file
     with cookie_path.open("wb") as f:
         pickle.dump(driver.get_cookies(), f)
     logger.info(f"Cookies saved to {cookie_path}")

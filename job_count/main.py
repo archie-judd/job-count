@@ -5,7 +5,8 @@ import re
 import sys
 from pathlib import Path
 
-from pydantic import BaseModel
+import tabulate
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -22,26 +23,17 @@ from job_count.browser import (
 )
 from job_count.cli import (
     ClearCookiesCliArgs,
-    CountJobsCliArgs,
     LoginCliArgs,
+    QueryArgs,
     parse_args,
     setup_parser,
 )
 from job_count.logging import get_log_level_for_verbosity, setup_logging
+from job_count.types import Job, JobWithCount
 
 logger = logging.getLogger(__name__)
 
 LINKEDIN_BASE_URL = "https://www.linkedin.com"
-
-
-class Job(BaseModel):
-    job_title: str
-    location: str
-
-
-class JobWithCount(Job):
-    ts: dt.datetime
-    count: int
 
 
 def read_jobs_to_search_for(file_path: Path) -> list[Job]:
@@ -54,6 +46,9 @@ def read_jobs_to_search_for(file_path: Path) -> list[Job]:
 def write_jobs_with_counts(file_path: Path, jobs_with_counts: list[JobWithCount]):
 
     file_exists = Path.exists(file_path) and Path(file_path).stat().st_size > 0
+    if not file_exists:
+        Path(file_path).parent.mkdir(parents=True, exist_ok=True)
+
     logger.info(f"Writing job counts to {file_path}")
 
     data = [job.model_dump() for job in jobs_with_counts]
@@ -125,40 +120,51 @@ def handle_login(args: LoginCliArgs):
 
     try:
         login_to_linkedin(driver, args.login_timeout, cookie_path)
-    except Exception as e:
+        driver.quit()
+        print(f"Successfully logged in! Cookies saved here: {cookie_path}")
+    except TimeoutException:
         driver.quit()
         logger.error(
-            "Failed to login, perhaps there was a Captcha that was not "
-            f"completed. Please try again. Exception: {e}"
+            "Timeout during login. Please try again. Consider extending the timeout "
+            f"with the argument --login-timeout."
         )
         sys.exit(1)
 
-    logger.info("Successfully logged in!")
 
-
-def handle_clear_cookies(args: ClearCookiesCliArgs):
+def handle_clear_cookies(
+    args: ClearCookiesCliArgs,
+):
 
     cookie_path = get_cookie_path(args.cookie_dir or DEFAULT_COOKIE_DIR, args.browser)
     clear_cookies(cookie_path)
 
-    logger.info("Cookies cleared")
+    print("Cookies cleared")
 
 
-def handle_count_jobs(args: CountJobsCliArgs):
+def print_results_table(jobs_with_counts: list[JobWithCount]):
+    results_raw: list[dict] = []
+    for job in jobs_with_counts:
+        result_raw = {k: v for k, v in job.model_dump().items() if k != "ts"}
+        results_raw.append(result_raw)
+    table = tabulate.tabulate(results_raw, headers="keys", tablefmt="pretty")
+    print(table)
 
-    cookie_path = get_cookie_path(args.cookie_dir or DEFAULT_COOKIE_DIR, args.browser)
-    driver = make_driver(args.browser, not args.no_headless)
 
-    jobs = read_jobs_to_search_for(args.input_file)
+def query(
+    jobs: list[Job],
+    cookie_path: Path,
+    driver: WebDriver,
+) -> list[JobWithCount]:
+
     driver.get(f"{LINKEDIN_BASE_URL}/feed/")
     cookies_loaded = load_cookies(driver, cookie_path)
 
     if not cookies_loaded:
-        logger.error("No cookies loaded. run 'linkedin-job-count login' first.")
+        logger.error("No cookies loaded. run 'job-count login' first.")
         sys.exit(0)
     if "login" in driver.current_url:
         logger.error(
-            "Cookies loaded but not logged in. Run 'linkedin-job-count login' to "
+            "Cookies loaded but not logged in. Run 'job-count login' to "
             "relogin first."
         )
         sys.exit(0)
@@ -167,10 +173,13 @@ def handle_count_jobs(args: CountJobsCliArgs):
 
     jobs_with_counts: list[JobWithCount] = []
 
-    for job in jobs:
-        count = get_job_count(driver, job.job_title, job.location)
+    for i, job in enumerate(jobs):
 
-        logger.info(f"Number of {job.job_title} jobs in {job.location}: {count}")
+        logger.info(
+            f"({i+1}/{len(jobs)}) - Searching for {job.job_title} jobs in {job.location}"
+        )
+
+        count = get_job_count(driver, job.job_title, job.location)
 
         job_with_count = JobWithCount(
             job_title=job.job_title,
@@ -180,8 +189,31 @@ def handle_count_jobs(args: CountJobsCliArgs):
         )
         jobs_with_counts.append(job_with_count)
 
+    return jobs_with_counts
+
+
+def handle_query(args: QueryArgs):
+
+    cookie_dir = args.cookie_dir or DEFAULT_COOKIE_DIR
+    cookie_path = get_cookie_path(cookie_dir=cookie_dir, browser=args.browser)
+    driver = make_driver(browser=args.browser, headless=not args.no_headless)
+
+    if args.input_file:
+        jobs = read_jobs_to_search_for(args.input_file)
+    elif args.terms:
+        jobs = args.terms
+    else:
+        raise ValueError("Expected either terms or input_file")
+
+    jobs_with_counts = query(jobs=jobs, cookie_path=cookie_path, driver=driver)
+
     driver.quit()
-    write_jobs_with_counts(args.output_file, jobs_with_counts)
+
+    print_results_table(jobs_with_counts)
+
+    if args.output_file:
+        write_jobs_with_counts(args.output_file, jobs_with_counts)
+        print(f"Results written to {args.output_file}")
 
 
 def main():
@@ -198,8 +230,8 @@ def main():
                 handle_login(args)
             case "clear-cookies":
                 handle_clear_cookies(args)
-            case "count-jobs":
-                handle_count_jobs(args)
+            case "query":
+                handle_query(args)
             case _:
                 raise ValueError(f"Unrecognized command: {args.command}")
 

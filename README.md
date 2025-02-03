@@ -53,17 +53,23 @@ Enter your details, and login, completing any Captcha questions. Upon login, the
 
 Run `job-count login -h` to see the options available for this command.
 
-## Count jobs
+## Query
 
-Having logged in, you can count the number of postings for various jobs with the following command:
+Having logged in, you can count the number of postings for various jobs with the `query` command. The query command accepts either list of terms, or an input file.
+
+To query with terms:
 
 ```bash
-job-count count-jobs </path/to/input/file.csv> </path/to/output/file.csv>
+job-count query --terms "Ice Sculptor,Honolulu" "Panda Fluffer,Greater Tokyo"
 ```
 
-Run `job-count count-jobs -h` for more options.
+Or with an input file:
 
-The command takes an input `.csv` file of format:\
+```bash
+job-count query --input-file <path/to/input/file.csv>
+```
+
+The command takes an input `.csv` file of format:
 
 | job_title     | location      |
 | ------------- | ------------- |
@@ -73,7 +79,13 @@ The command takes an input `.csv` file of format:\
 
 You can see an example at `sample_data/input.csv`.
 
-It will write the output which will look like:
+You can optionally write the results of the query to an output file as follows:
+
+```bash
+job-count query --terms "Ice Sculptor,Honolulu" "Panda Fluffer,Greater Tokyo" --output-file <path/to/output.csv>
+```
+
+The results will be written in the format:
 
 | job_title     | location      | ts                       | count |
 | ------------- | ------------- | ------------------------ | ----- |
@@ -84,6 +96,8 @@ It will write the output which will look like:
 You can see an example at `sample_data/output.csv`.
 
 If your output file doesn't exist, it will be created, if there is already data in your output file, it will be appended to.
+
+Run `job-count count-jobs -h` for more options.
 
 ## Clear cookies
 
@@ -100,7 +114,7 @@ No, you read the code to be sure.
 The easiest way is probably via [crontab](https://man7.org/linux/man-pages/man5/crontab.5.html). Here is an example that runs at 9pm each day:
 
 ```bash
-0 21 * * * <path/to/job-count> count-jobs <path/to/input.csv> <path/to/output.csv> --log-file <path/to/log-file.log> --verbose
+0 21 * * * <path/to/job-count> query --input-file <path/to/input.csv> --output-file <path/to/output.csv> --log-file <path/to/log-file.log> --verbose
 
 ```
 
