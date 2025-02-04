@@ -1,10 +1,11 @@
 import logging
 import pickle
-import shutil
 from enum import StrEnum
 from pathlib import Path
 
+import selenium
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -41,12 +42,11 @@ def make_driver(
                 driver = webdriver.Firefox(options=options)
             case _:
                 raise ValueError(f"Unsupported browser: {browser}")
-    except Exception as e:
-        raise e
+    except WebDriverException as e:
         logger.error(
             f"{browser.value} could not be opened. Ensure the it is installed or select "
             "another browser using the --browser argument. Available browsers: "
-            f"{', '.join(list(Browser))}. Error: {e}"
+            f"{', '.join(list(Browser))}.\nError: {e}"
         )
         exit(1)
     return driver
