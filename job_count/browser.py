@@ -27,27 +27,28 @@ def make_driver(
     headless: bool,
 ) -> ChromeWebDriver | FirefoxWebDriver:
 
-    if not shutil.which(browser.value):
+    try:
+        match browser:
+            case Browser.CHROME:
+                options = ChromeOptions()
+                if headless:
+                    options.add_argument("--headless")
+                driver = webdriver.Chrome(options=options)
+            case Browser.FIREFOX:
+                options = FirefoxOptions()
+                if headless:
+                    options.add_argument("--headless")
+                driver = webdriver.Firefox(options=options)
+            case _:
+                raise ValueError(f"Unsupported browser: {browser}")
+    except Exception as e:
+        raise e
         logger.error(
-            f"{browser.value} not found in PATH. Ensure the it is installed or select "
+            f"{browser.value} could not be opened. Ensure the it is installed or select "
             "another browser using the --browser argument. Available browsers: "
-            f"{', '.join(list(Browser))}."
+            f"{', '.join(list(Browser))}. Error: {e}"
         )
         exit(1)
-
-    if browser is Browser.CHROME:
-        options = ChromeOptions()
-        if headless:
-            options.add_argument("--headless")
-        driver = webdriver.Chrome(options=options)
-    elif browser is Browser.FIREFOX:
-        options = FirefoxOptions()
-        if headless:
-            options.add_argument("--headless")
-        driver = webdriver.Firefox(options=options)
-    else:
-        raise ValueError(f"Unsupported browser: {browser}")
-
     return driver
 
 

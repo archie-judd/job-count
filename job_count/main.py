@@ -38,7 +38,7 @@ LINKEDIN_BASE_URL = "https://www.linkedin.com"
 
 def read_jobs_to_search_for(file_path: Path) -> list[Job]:
 
-    logger.info(f"Readings job to search for from {file_path}")
+    logger.info(f"Reading job to search for from {file_path}")
     with open(file_path, mode="r", encoding="utf-8") as file:
         return [Job.model_validate(row) for row in csv.DictReader(file)]
 

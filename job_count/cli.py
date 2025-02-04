@@ -21,12 +21,13 @@ class QueryArgs(BaseModel):
     verbose: int = 0
     log_file: str | None = None
 
-    @field_validator("jobs", mode="before")
+    @field_validator("terms", mode="before")
     @classmethod
     def parse_jobs(cls, value):
-        for i, job_raw in enumerate(value):
-            if isinstance(job_raw, str):
-                value[i] = Job.from_string(job_raw)
+        if value is not None:
+            for i, job_raw in enumerate(value):
+                if isinstance(job_raw, str):
+                    value[i] = Job.from_string(job_raw)
         return value
 
     @model_validator(mode="after")
@@ -149,7 +150,7 @@ def setup_parser() -> ArgumentParser:
     )
     query_input = query_parser.add_mutually_exclusive_group(required=True)
     query_input.add_argument(
-        "--input_file",
+        "--input-file",
         "-i",
         metavar="input_file",
         help=(
@@ -168,10 +169,10 @@ def setup_parser() -> ArgumentParser:
         ),
     )
     query_parser.add_argument(
-        "--output_file",
+        "--output-file",
         "-o",
         help="The path to the .csv output file to write the job counts to.",
-        metavar="output-file",
+        metavar="output_file",
         type=str,
         required=False,
     )
