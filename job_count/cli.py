@@ -19,6 +19,7 @@ class QueryArgs(BaseModel):
     no_headless: bool = False
     cookie_dir: Path | None
     verbose: int = 0
+    quiet: int = 0
     log_file: str | None = None
 
     @field_validator("terms", mode="before")
@@ -43,6 +44,7 @@ class LoginCliArgs(BaseModel):
     cookie_dir: Path | None
     login_timeout: int = 60
     verbose: int = 0
+    quiet: int = 0
     log_file: str | None = None
 
 
@@ -50,6 +52,7 @@ class ClearCookiesCliArgs(BaseModel):
     command: Literal["clear-cookies"] = "clear-cookies"
     cookie_dir: Path | None
     verbose: int = 0
+    quiet: int = 0
     log_file: str | None = None
     browser: Browser = Browser.CHROME
 

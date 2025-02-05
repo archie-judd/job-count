@@ -222,7 +222,7 @@ def main():
         parser = setup_parser()
         args = parse_args(parser)
 
-        log_level = get_log_level_for_verbosity(args.verbose)
+        log_level = get_log_level_for_verbosity(args.verbose - args.quiet)
         setup_logging(log_level, args.log_file)
 
         match args.command:
