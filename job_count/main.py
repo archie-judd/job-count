@@ -116,7 +116,7 @@ def get_job_count(driver: WebDriver, job_title: str, location: str) -> int:
 def handle_login(args: LoginCliArgs):
 
     cookie_path = get_cookie_path(args.cookie_dir or DEFAULT_COOKIE_DIR, args.browser)
-    driver = make_driver(args.browser, False)
+    driver = make_driver(args.browser, False, args.driver_path)
 
     try:
         login_to_linkedin(driver, args.login_timeout, cookie_path)
@@ -196,7 +196,11 @@ def handle_query(args: QueryArgs):
 
     cookie_dir = args.cookie_dir or DEFAULT_COOKIE_DIR
     cookie_path = get_cookie_path(cookie_dir=cookie_dir, browser=args.browser)
-    driver = make_driver(browser=args.browser, headless=not args.no_headless)
+    driver = make_driver(
+        browser=args.browser,
+        headless=not args.no_headless,
+        driver_path=args.driver_path,
+    )
 
     if args.input_file:
         jobs = read_jobs_to_search_for(args.input_file)

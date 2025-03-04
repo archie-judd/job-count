@@ -16,6 +16,7 @@ class QueryArgs(BaseModel):
     input_file: Path | None = None
     output_file: Path | None = None
     browser: Browser = Browser.CHROME
+    driver_path: Path | None = None
     no_headless: bool = False
     cookie_dir: Path | None
     verbose: int = 0
@@ -41,6 +42,7 @@ class QueryArgs(BaseModel):
 class LoginCliArgs(BaseModel):
     command: Literal["login"] = "login"
     browser: Browser = Browser.CHROME
+    driver_path: Path | None
     cookie_dir: Path | None
     login_timeout: int = 60
     verbose: int = 0
@@ -123,8 +125,16 @@ def setup_parser() -> ArgumentParser:
         type=str,
     )
     login_parser.add_argument(
-        "--cookie-dir",
+        "--driver-path",
         "-d",
+        help="The path to the Chromedriver or Geckodriver executable",
+        metavar="browser_path",
+        type=str,
+        required=False,
+    )
+    login_parser.add_argument(
+        "--cookie-dir",
+        "-c",
         help=(
             "Path to a directory for storing cookies (to prevent needing to login each "
             "time). Defaults to ~/.local/share/job-count."
@@ -192,6 +202,14 @@ def setup_parser() -> ArgumentParser:
         type=str,
     )
     query_parser.add_argument(
+        "--driver-path",
+        "-d",
+        help="The path to the Chromedriver or Geckodriver executable",
+        metavar="browser_path",
+        type=str,
+        required=False,
+    )
+    query_parser.add_argument(
         "--no-headless",
         "-N",
         help="Run the tool in a headed browser window.",
@@ -200,7 +218,7 @@ def setup_parser() -> ArgumentParser:
     )
     query_parser.add_argument(
         "--cookie-dir",
-        "-d",
+        "-c",
         help=(
             "Path to a directory for storing cookies (to prevent needing to login each "
             "time). Defaults to ~/.local/share/job-count."
@@ -231,7 +249,7 @@ def setup_parser() -> ArgumentParser:
     )
     clear_cookies_parser.add_argument(
         "--cookie-dir",
-        "-d",
+        "-c",
         help=(
             "Path to a directory for storing cookies (to prevent needing to login each "
             "time). Defaults to ~/.local/share/job-count."

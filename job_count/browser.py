@@ -1,14 +1,16 @@
 import logging
 import pickle
+import shutil
 from enum import StrEnum
 from pathlib import Path
 
-import selenium
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.firefox.webdriver import WebDriver as FirefoxWebDriver
 
 logger = logging.getLogger(__name__)
@@ -26,29 +28,37 @@ class Browser(StrEnum):
 def make_driver(
     browser: Browser,
     headless: bool,
+    driver_path: Path | None,
 ) -> ChromeWebDriver | FirefoxWebDriver:
 
-    try:
-        match browser:
-            case Browser.CHROME:
-                options = ChromeOptions()
-                if headless:
-                    options.add_argument("--headless")
+    match browser:
+        case Browser.CHROME:
+            options = ChromeOptions()
+            if headless:
+                options.add_argument("--headless")
+            if driver_path:
+                service = ChromeService(executable_path=str(driver_path))
+                driver = webdriver.Chrome(service=service, options=options)
+            else:
                 driver = webdriver.Chrome(options=options)
-            case Browser.FIREFOX:
-                options = FirefoxOptions()
-                if headless:
-                    options.add_argument("--headless")
+        case Browser.FIREFOX:
+            options = FirefoxOptions()
+            if headless:
+                options.add_argument("--headless")
+            if driver_path:
+                service = FirefoxService(executable_path=str(driver_path))
+                driver = webdriver.Firefox(service=service, options=options)
+            else:
                 driver = webdriver.Firefox(options=options)
-            case _:
-                raise ValueError(f"Unsupported browser: {browser}")
-    except WebDriverException as e:
-        logger.error(
-            f"{browser.value} could not be opened. Ensure the it is installed or select "
-            "another browser using the --browser argument. Available browsers: "
-            f"{', '.join(list(Browser))}.\nError: {e}"
-        )
-        exit(1)
+        case _:
+            raise ValueError(f"Unsupported browser: {browser}")
+    # except WebDriverException as e:
+    #     logger.error(
+    #         f"{browser.value} could not be opened. Ensure the it is installed or select "
+    #         "another browser using the --browser argument. Available browsers: "
+    #         f"{', '.join(list(Browser))}.\nError: {e}"
+    #     )
+    #     exit(1)
     return driver
 
 
